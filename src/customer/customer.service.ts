@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { PrismaService } from 'src/prisma.service';
@@ -12,18 +12,28 @@ export class CustomerService {
   }
 
   async findOne(id: number) {
-    return await this.prisma.customer.findUnique({ where: { id: Number(id) } });
+    return this.prisma.customer.findUnique({ where: { id: Number(id) } });
   }
 
-  create(createCustomerDto: CreateCustomerDto) {
+  async create(createCustomerDto: CreateCustomerDto) {
+
+    await this.ensureUniqueCustomerCredentials(createCustomerDto.cpf, createCustomerDto.email);
+
     return this.prisma.customer.create({data: createCustomerDto})
   }
 
-  // update(id: number, updateUserDto: UpdateUserDto) {
-  //   return `This action updates a #${id} user`;
-  // }
+  async findUserByCredentials(cpf: string, email: string) {
+    return this.prisma.customer.findFirst({
+      where: { OR: [
+        { email },
+        { cpf},
+      ]}
+    })
+  }
 
-  // remove(id: number) {
-  //   return `This action removes a #${id} user`;
-  // }
+  async ensureUniqueCustomerCredentials (cpf: string, email: string) {
+    const existingCustomer = await this.findUserByCredentials(cpf, email);
+    if (existingCustomer)
+      throw new ConflictException('Usuário já cadastrado')
+  }
 }
