@@ -2,6 +2,9 @@ import { ConflictException, Injectable } from '@nestjs/common';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { PrismaService } from 'src/prisma.service';
+import * as bcrypt from 'bcrypt';
+
+export const salt = 10;
 
 @Injectable()
 export class CustomerService {
@@ -18,6 +21,13 @@ export class CustomerService {
   async create(createCustomerDto: CreateCustomerDto) {
 
     await this.ensureUniqueCustomerCredentials(createCustomerDto.cpf, createCustomerDto.email);
+
+    const hashedPassword = await bcrypt.hash(
+      createCustomerDto.password,
+      salt,
+    )
+
+    createCustomerDto.password = hashedPassword;
 
     return this.prisma.customer.create({data: createCustomerDto})
   }
