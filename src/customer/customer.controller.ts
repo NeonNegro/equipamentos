@@ -3,28 +3,30 @@ import { CustomerService } from './customer.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { CustomerEntity } from './entities/customer.entity';
 
 @Controller('customer')
 export class CustomerController {
   constructor(private readonly customerService: CustomerService) {}
 
   @Post()
-  create(@Body() createCustomerDto: CreateCustomerDto) {
-    return this.customerService.create(createCustomerDto);
+  async create(@Body() createCustomerDto: CreateCustomerDto) {
+    return new CustomerEntity( await this.customerService.create(createCustomerDto)) ;
   }
 
   @Get()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  findAll() {
-    return this.customerService.findAll();
+  async findAll() {
+    const customers = await this.customerService.findAll();
+    return customers.map((c) => new CustomerEntity(c)) 
   }
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.customerService.findOne(id);
+  async findOne(@Param('id', ParseIntPipe) id: number) {
+    return new CustomerEntity(await this.customerService.findOne(id));
   }
 
   // @Delete(':id')
