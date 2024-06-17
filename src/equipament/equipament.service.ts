@@ -1,7 +1,8 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateEquipamentDto } from './dto/create-equipament.dto';
 import { PrismaService } from 'src/prisma.service';
-import { Equipament, TransactionType } from '@prisma/client';
+import { Equipament, Prisma, PrismaClient, TransactionType } from '@prisma/client';
+import { DefaultArgs } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class EquipamentService {
@@ -27,12 +28,12 @@ export class EquipamentService {
 
     const rental = await this.prisma.$transaction(async (tx) => {
       
-        await this.ensureEquipamentExists(equipamentId);
+        await this.ensureEquipamentExists(equipamentId, tx);
 
-        const requestedEquipament = await this.updateAvailableAmountOfEquipments(equipamentId, equipamentQuantity, 'decrement');
+        const requestedEquipament = await this.updateAvailableAmountOfEquipments(equipamentId, equipamentQuantity, 'decrement', tx);
         await this.ensureEquipamentIsAvailable(requestedEquipament, equipamentQuantity);
 
-        return this.prisma.rental.create({
+        return tx.rental.create({
           data: {
             customerId,
             equipamentId,
@@ -49,13 +50,13 @@ export class EquipamentService {
   async returnEquipament(customerId: number, rentalId: number, equipamentQuantity: number) {
     
     const returned = await this.prisma.$transaction(async (tx) => {
-      const rental = await this.ensureRentalExists(rentalId, customerId);
+      const rental = await this.ensureRentalExists(rentalId, customerId, tx);
 
-      await this.updateAvailableAmountOfEquipments(rental.equipamentId, equipamentQuantity, 'increment');
+      await this.updateAvailableAmountOfEquipments(rental.equipamentId, equipamentQuantity, 'increment', tx);
 
-      await this.validateReturnQuantity(customerId, rental.equipamentId, equipamentQuantity);
+      await this.validateReturnQuantity(customerId, rental.equipamentId, equipamentQuantity, tx);
 
-      return this.prisma.rental.create({
+      return tx.rental.create({
         data: {
           customerId: rental.customerId,
           equipamentId: rental.equipamentId,
@@ -68,10 +69,10 @@ export class EquipamentService {
     return returned;
   }
 
-  async IncreaseAmountOfEquipament(equipamentId: number, quantityAdded: number){
+  async IncreaseAmountOfEquipament(equipamentId: number, quantityAdded: number,  channel: PrismaClientType = this.prisma){
     await this.ensureEquipamentExists(equipamentId);
 
-    return this.prisma.equipament.update({
+    return (channel || this.prisma).equipament.update({
       where: {id: equipamentId},
       data: {
         totalAmount: {increment: quantityAdded},
@@ -80,39 +81,42 @@ export class EquipamentService {
     })
   }
 
-  async updateAvailableAmountOfEquipments(equipamentId: number, equipamentQuantity: number, operation: 'increment' | 'decrement') {
+  async updateAvailableAmountOfEquipments(equipamentId: number, equipamentQuantity: number, 
+    operation: 'increment' | 'decrement',  channel: PrismaClientType = this.prisma) {
+
     await this.ensureEquipamentExists(equipamentId);
   
-    return this.prisma.equipament.update({
+    return (channel || this.prisma).equipament.update({
       where: { id: equipamentId },
       data: { availableAmount: { [operation]: equipamentQuantity }}
     });
   }
 
-  async ensureRentalExists(id: number, customerId: number)  {
-    const rental = await this.prisma.rental.findUnique({ where: { id, customerId } });
+  async ensureRentalExists(id: number, customerId: number, channel: PrismaClientType = this.prisma)  {
+    const rental = await (channel || this.prisma).rental.findUnique({ where: { id, customerId } });
     if (!rental)
       throw new NotFoundException('Registro de aluguel não encontrado');
     return rental
   }
-  async ensureUniqueEquipament (name: string) {
-    const existingEquipament = await this.prisma.equipament.findFirst({where:{name}}) 
+  async ensureUniqueEquipament (name: string, channel: PrismaClientType = this.prisma) {
+    const existingEquipament = await (channel || this.prisma).equipament.findFirst({where:{name}}) 
     
     if (existingEquipament) throw new ConflictException('Equipamento já cadastrado')
   }
   async ensureEquipamentIsAvailable (requestedEquipament: Equipament, qtd: number) {
     if (requestedEquipament.availableAmount <= 0) throw new ConflictException('Quantidade de equipamento não disponível')
   }
-  async ensureEquipamentExists (id: number){
-    const equipament = await this.prisma.equipament.findUnique({
+  async ensureEquipamentExists (id: number, channel: PrismaClientType = this.prisma){
+    const equipament = await (channel || this.prisma).equipament.findUnique({
       where:{ id },
       include:{ rentals: true},
     }) 
     
     if (!equipament) throw new NotFoundException('Equipamento não existe');
   }
-  async validateReturnQuantity(customerId: number, equipamentId: number, equipamentQuantity: number) {
-    const totalTook = await this.prisma.rental.aggregate({
+  async validateReturnQuantity(customerId: number, equipamentId: number, equipamentQuantity: number, 
+    channel: PrismaClientType = this.prisma) {
+    const totalTook = await (channel || this.prisma).rental.aggregate({
         where: {
             customerId,
             equipamentId,
@@ -142,3 +146,9 @@ export class EquipamentService {
     }
 }
 }
+
+
+type PrismaClientType = Omit<
+  PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>,
+  "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends"
+>;
