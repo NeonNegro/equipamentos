@@ -14,29 +14,37 @@ model Customer {
   email    String @unique
   password String
 
-  rentals      Rental[]
+  rentals Rental[]
 
   @@map("customers")
 }
 
 model Equipament {
-  id     Int    @id @default(autoincrement())
-  name   String @unique
-  amount Int
+  id              Int    @id @default(autoincrement())
+  name            String @unique
+  totalAmount     Int
+  availableAmount Int
 
-  rentals    Rental[]
+  rentals Rental[]
 
   @@map("equipaments")
 }
 
 model Rental {
-  id           Int      @id @default(autoincrement())
-  customerId   Int
-  equipamentId Int
-  rentalDate   DateTime @default(now())
+  id              Int             @id @default(autoincrement())
+  quantity        Int
+  transactionType TransactionType
+  transactionDate DateTime        @default(now())
+  customerId      Int
+  equipamentId    Int
 
   customer   Customer   @relation(fields: [customerId], references: [id])
   equipament Equipament @relation(fields: [equipamentId], references: [id])
 
   @@map("rentals")
+}
+
+enum TransactionType {
+  in
+  out
 }

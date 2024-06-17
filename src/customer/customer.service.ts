@@ -1,6 +1,5 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateCustomerDto } from './dto/create-customer.dto';
-import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { PrismaService } from 'src/prisma.service';
 import * as bcrypt from 'bcrypt';
 
@@ -15,7 +14,14 @@ export class CustomerService {
   }
 
   async findOne(id: number) {
-    return this.prisma.customer.findUnique({ where: { id: Number(id) } });
+    return this.prisma.customer.findUnique({ 
+      where: { id: Number(id) },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      }, 
+    });
   }
 
   async create(createCustomerDto: CreateCustomerDto) {
@@ -32,7 +38,7 @@ export class CustomerService {
     return this.prisma.customer.create({data: createCustomerDto})
   }
 
-  async findUserByCredentials(cpf: string, email: string) {
+  async findCustomerByCredentials(cpf: string, email: string) {
     return this.prisma.customer.findFirst({
       where: { OR: [
         { email },
@@ -42,8 +48,15 @@ export class CustomerService {
   }
 
   async ensureUniqueCustomerCredentials (cpf: string, email: string) {
-    const existingCustomer = await this.findUserByCredentials(cpf, email);
+    const existingCustomer = await this.findCustomerByCredentials(cpf, email);
     if (existingCustomer)
       throw new ConflictException('Usuário já cadastrado')
+  }
+  async ensureCustomerExists (id: number){
+    const customer = await this.prisma.customer.findUnique({
+      where:{ id },
+    }) 
+    
+    if (!customer) throw new NotFoundException('Usuario não existe');
   }
 }

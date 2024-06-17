@@ -9,6 +9,9 @@ export class EquipamentEntity implements Equipament {
     name: string;
 
     @ApiProperty()
-    amount: number;
+    totalAmount: number;
+
+    @ApiProperty()
+    availableAmount: number;
     
 }
