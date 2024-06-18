@@ -9,7 +9,7 @@
 
 ## Description
 
-In this program it is possible to register users and equipment; in addition to
+In this Backend program it is possible to register users and equipment; in addition to
 rent and return these to stock. New units of already registered equipment can also be added.
 
 ## Diagram
@@ -24,6 +24,17 @@ Before starting, you will need to have the following tools installed on your mac
 ```bash
 $ npm install
 ```
+
+## .env Configuration
+
+In order to use this, you need to create a `.env` file in the root of the program, with the keys `JWT_SECRET` and `DATABASE_URL`, like this:
+
+```bash
+DATABASE_URL="postgres://[ user ]:[ password ]@[ adress ]:[ port ]/[ database_name ]"
+JWT_SECRET= [ your_jwt_secret_here ]
+```
+
+postgres://usuario:senha@localhost:5432/banco_de_dados
 
 ## Running the app
 
