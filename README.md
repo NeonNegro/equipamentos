@@ -36,6 +36,26 @@ JWT_SECRET= [ your_jwt_secret_here ]
 
 postgres://usuario:senha@localhost:5432/banco_de_dados
 
+## Using Prisma
+
+The project uses [Prisma](https://www.prisma.io/) as the ORM to interact with the database. Follow these steps to set it up:
+
+1. **Run Migrations**:
+
+    Apply the database migrations with:
+
+    ```bash
+    npx prisma migrate dev
+    ```
+
+2. **Generate Prisma Client**:
+
+    Generate the Prisma client to reflect your schema:
+
+    ```bash
+    npx prisma generate
+    ```
+
 ## Running the app
 
 ```bash
